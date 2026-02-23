@@ -33,9 +33,15 @@ class BleBloc extends Bloc<BleEvent, BleState> {
     _log("Scanning started...", emit);
 
     _scanSub?.cancel();
-    _scanSub = repository.scan().listen((device) {
-      _log("Found: ${device.name} - ${device.id}", emit);
-    });
+    _scanSub = repository.scan().listen(
+      (device) {
+        _log("Found: ${device.name} - ${device.id}", emit);
+      },
+      onError: (error) {
+        _log("Scan error: $error", emit);
+        emit(state.copyWith(status: BleStatus.error));
+      },
+    );
   }
 
   void _onConnect(ConnectToDevice event, Emitter<BleState> emit) {

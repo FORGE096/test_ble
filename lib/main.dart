@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'bloc/ble_bloc.dart';
 import 'bloc/ble_event.dart';
 import 'bloc/ble_state.dart';
@@ -24,8 +25,26 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class BlePage extends StatelessWidget {
+class BlePage extends StatefulWidget {
   const BlePage({super.key});
+
+  @override
+  State<BlePage> createState() => _BlePageState();
+}
+
+class _BlePageState extends State<BlePage> {
+  @override
+  void initState() {
+    super.initState();
+    _requestPermissions();
+  }
+
+  Future<void> _requestPermissions() async {
+    await Permission.location.request();
+    await Permission.bluetoothScan.request();
+    await Permission.bluetoothConnect.request();
+    await Permission.bluetoothAdvertise.request();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +67,25 @@ class BlePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    final locationStatus = await Permission.location.status;
+                    final bluetoothStatus =
+                        await Permission.bluetoothScan.status;
+
+                    if (!locationStatus.isGranted ||
+                        !bluetoothStatus.isGranted) {
+                      await _requestPermissions();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Permissions requested. Please try again.',
+                          ),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      return;
+                    }
+
                     context.read<BleBloc>().add(StartScan());
                   },
                   child: const Text("Scan"),
