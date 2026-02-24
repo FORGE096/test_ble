@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import '../data/ble_central_repository.dart';
 import 'ble_event.dart';
 import 'ble_state.dart';
@@ -29,17 +30,31 @@ class BleBloc extends Bloc<BleEvent, BleState> {
   }
 
   void _onScan(StartScan event, Emitter<BleState> emit) {
-    emit(state.copyWith(status: BleStatus.scanning));
+    emit(state.copyWith(status: AppBleStatus.scanning, discoveredDevices: []));
     _log("Scanning started...", emit);
 
     _scanSub?.cancel();
     _scanSub = repository.scan().listen(
       (device) {
+        final updatedDevices = List<DiscoveredDevice>.from(
+          state.discoveredDevices,
+        );
+        final existingIndex = updatedDevices.indexWhere(
+          (d) => d.id == device.id,
+        );
+
+        if (existingIndex >= 0) {
+          updatedDevices[existingIndex] = device;
+        } else {
+          updatedDevices.add(device);
+        }
+
+        emit(state.copyWith(discoveredDevices: updatedDevices));
         _log("Found: ${device.name} - ${device.id}", emit);
       },
       onError: (error) {
         _log("Scan error: $error", emit);
-        emit(state.copyWith(status: BleStatus.error));
+        emit(state.copyWith(status: AppBleStatus.error));
       },
     );
   }
@@ -48,21 +63,24 @@ class BleBloc extends Bloc<BleEvent, BleState> {
     _manualDisconnect = false;
     _connectedDevice = event.deviceId;
 
-    emit(state.copyWith(status: BleStatus.connecting));
+    emit(state.copyWith(status: AppBleStatus.connecting));
     _log("Connecting...", emit);
 
     _connectionSub?.cancel();
     _connectionSub = repository.connect(event.deviceId).listen((update) {
       if (update.connectionState.name == "connected") {
         emit(
-          state.copyWith(status: BleStatus.connected, deviceId: event.deviceId),
+          state.copyWith(
+            status: AppBleStatus.connected,
+            deviceId: event.deviceId,
+          ),
         );
         _retryCount = 0;
         _log("Connected ✅", emit);
 
         _listenToData(emit);
       } else if (update.connectionState.name == "disconnected") {
-        emit(state.copyWith(status: BleStatus.disconnected));
+        emit(state.copyWith(status: AppBleStatus.disconnected));
         _log("Disconnected ❌", emit);
 
         if (!_manualDisconnect) {
@@ -103,7 +121,7 @@ class BleBloc extends Bloc<BleEvent, BleState> {
   void _onDisconnect(DisconnectDevice event, Emitter<BleState> emit) {
     _manualDisconnect = true;
     _connectionSub?.cancel();
-    emit(state.copyWith(status: BleStatus.disconnected));
+    emit(state.copyWith(status: AppBleStatus.disconnected));
     _log("Manual disconnect", emit);
   }
 

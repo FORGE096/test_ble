@@ -6,7 +6,7 @@ class BleCentralRepository {
 
   Stream<DiscoveredDevice> scan() {
     return _ble.scanForDevices(
-      withServices: [BleUuids.serviceUuid],
+      withServices: [], // Scan for all devices, not just specific service
       scanMode: ScanMode.lowLatency,
     );
   }

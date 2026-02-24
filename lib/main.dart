@@ -90,7 +90,46 @@ class _BlePageState extends State<BlePage> {
                   },
                   child: const Text("Scan"),
                 ),
+                const SizedBox(height: 20),
+                const Text(
+                  "Discovered Devices:",
+                  style: TextStyle(color: Colors.white),
+                ),
                 const SizedBox(height: 10),
+                Expanded(
+                  flex: 2,
+                  child: ListView.builder(
+                    itemCount: state.discoveredDevices.length,
+                    itemBuilder: (context, index) {
+                      final device = state.discoveredDevices[index];
+                      return Card(
+                        color: Colors.grey[800],
+                        child: ListTile(
+                          title: Text(
+                            device.name.isEmpty
+                                ? "Unknown Device"
+                                : device.name,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          subtitle: Text(
+                            device.id,
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                          trailing: Text(
+                            "${device.rssi} dBm",
+                            style: const TextStyle(color: Colors.green),
+                          ),
+                          onTap: () {
+                            context.read<BleBloc>().add(
+                              ConnectToDevice(device.id),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () {
                     if (state.deviceId != null) {
@@ -99,23 +138,20 @@ class _BlePageState extends State<BlePage> {
                   },
                   child: const Text("Send 42"),
                 ),
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: () {
-                    context.read<BleBloc>().add(DisconnectDevice());
-                  },
-                  child: const Text("Disconnect"),
-                ),
                 const SizedBox(height: 20),
                 const Text("Logs:", style: TextStyle(color: Colors.white)),
                 const SizedBox(height: 10),
                 Expanded(
+                  flex: 1,
                   child: ListView(
                     children: state.logs
                         .map(
                           (log) => Text(
                             log,
-                            style: const TextStyle(color: Colors.green),
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontSize: 12,
+                            ),
                           ),
                         )
                         .toList(),
